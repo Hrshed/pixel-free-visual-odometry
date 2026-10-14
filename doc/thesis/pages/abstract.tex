@@ -1,0 +1,80 @@
+\chapter{\abstractname}
+
+Wearables and small drones need to understand how they move while operating
+with limited power and computation. Visual odometry estimates this movement
+from camera images, usually by tracking image features over time. Yet many
+camera devices already contain dedicated hardware that searches for matching
+image regions to compress video. Could the motion information produced by
+this widely available hardware also support camera tracking?
+
+This thesis explores that possibility using motion vectors from H.264 video
+compression. These vectors describe how the encoder predicts image blocks;
+they are designed to save data, so they do not necessarily follow the same
+physical points over time. The proposed method combines vectors from two
+cameras with known camera geometry to estimate depth and camera movement.
+Its tracking and motion estimation use these measurements without consulting
+image pixels. This approach is compatible with compress-then-analyze: a
+camera could send the required compressed streams to a companion phone,
+which reuses their motion information for localisation.
+
+Experiments on an established drone benchmark recover coherent camera
+trajectories, particularly on easier sequences. More demanding sequences
+expose limitations, and methods that refine their tracks using image pixels
+remain more accurate overall. The results nevertheless demonstrate that
+useful camera tracking from codec motion vectors is feasible. They provide
+one starting point for turning existing video-processing resources into a
+source of geometric information. The experiments establish this possibility;
+live hardware operation and the potential energy savings remain to be
+evaluated.
+
+
+\makeatletter
+\ifthenelse{\pdf@strcmp{\languagename}{english}=0}
+{\renewcommand{\abstractname}{Kurzfassung}}
+{\renewcommand{\abstractname}{Abstract}}
+\makeatother
+
+\chapter{\abstractname}
+
+\begin{otherlanguage}{ngerman}
+\sisetup{locale=DE}
+
+Wearables und kleine Drohnen müssen ihre eigene Bewegung erfassen können,
+obwohl ihnen nur begrenzte Energie und Rechenleistung zur Verfügung stehen.
+Visuelle Odometrie schätzt diese Bewegung aus Kamerabildern, üblicherweise
+durch die Verfolgung von Bildmerkmalen über die Zeit. Viele Kamerageräte
+enthalten jedoch bereits spezialisierte Hardware, die zur Videokompression
+nach übereinstimmenden Bildregionen sucht. Könnten die dabei gewonnenen
+Bewegungsinformationen auch zur Schätzung der Kamerabewegung dienen?
+
+Diese Arbeit untersucht diese Möglichkeit anhand von Bewegungsvektoren
+aus der H.264-Videokompression. Die Vektoren beschreiben, wie der Encoder
+Bildblöcke vorhersagt. Da sie der Datenreduktion dienen, verfolgen sie nicht
+zwangsläufig dieselben physischen Punkte über die Zeit. Das vorgeschlagene
+Verfahren kombiniert Vektoren aus zwei Kameras mit bekannter Kamerageometrie,
+um Tiefe und Kamerabewegung zu schätzen. Die Verfolgung und Bewegungsschätzung
+nutzen diese Messungen, ohne auf Bildpixel zuzugreifen. Dieser Ansatz ist
+mit Compress-then-Analyze vereinbar: Eine Kamera könnte die benötigten
+komprimierten Videoströme an ein gekoppeltes Smartphone senden, das deren
+Bewegungsinformationen für die Lokalisierung wiederverwendet.
+
+Experimente auf einem etablierten Drohnen-Benchmark liefern schlüssige
+Kameratrajektorien, insbesondere auf einfacheren Sequenzen. Anspruchsvollere
+Sequenzen zeigen Grenzen auf; Verfahren, die ihre Korrespondenzen anhand von
+Bildpixeln verfeinern, bleiben insgesamt genauer. Dennoch belegen die
+Ergebnisse, dass eine brauchbare Schätzung der Kamerabewegung allein aus
+Codec-Bewegungsvektoren möglich ist. Sie bieten einen Ausgangspunkt dafür,
+vorhandene Ressourcen zur Videoverarbeitung als Quelle geometrischer
+Informationen zu nutzen. Die Experimente zeigen diese Machbarkeit; der
+Live-Betrieb auf entsprechender Hardware und mögliche Energieeinsparungen
+müssen noch untersucht werden.
+
+\end{otherlanguage}
+
+
+% Undo the name switch
+\makeatletter
+\ifthenelse{\pdf@strcmp{\languagename}{english}=0}
+{\renewcommand{\abstractname}{Abstract}}
+{\renewcommand{\abstractname}{Kurzfassung}}
+\makeatother

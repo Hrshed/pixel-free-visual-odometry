@@ -1,0 +1,349 @@
+% !TeX root = ../main.tex
+
+\chapter{Experimental Methodology}\label{chapter:experimental-methodology}
+
+\section{Research Design}
+
+The evaluation separates three forms of evidence. First, Pixelless VO (PVO) is
+compared with a stationary baseline and two pixel-refined reference
+configurations. Second, a component ablation holds the stereo frontend,
+TEASER++ registration, rigid-flow residual, backend settings, and encoded input
+fixed while enabling reciprocal motion-vector agreement and spatial suppression
+individually and jointly. Third, offline diagnostics measure track persistence,
+stereo support, image-structure coincidence, and the conditions associated with
+large local error. The latter measurements explain the operating envelope but
+are not inputs to the estimator.
+
+All trajectory tables use full-sequence runs. The reported PVO trajectory uses
+the operating point selected by the bounded parameter study described below;
+short smoke tests, abandoned variants, and results from non-equivalent
+diagnostic builds are excluded. Every reported configuration completed
+all eleven sequences; a failed or incomplete run would be reported as missing
+rather than replaced by a numeric value.
+
+\section{Dataset}
+
+Experiments use all eleven sequences of the EuRoC MAV dataset, an established
+benchmark for visual odometry and SLAM, with its supplied stereo calibration
+and ground truth~\cite{burri2016euroc}. The evaluated sequence
+aliases, difficulty labels, and frame counts are listed in
+\autoref{tab:euroc-evaluation-set}.
+
+Other relevant benchmarks include TUM-VI~\cite{schubert2018vidataset} and the
+Monado SLAM Dataset~\cite{deMayoCremersPireMSD}. The choice of EuRoC for the
+final evaluation is primarily motivated by two practical requirements of the
+present construction: broad usable coverage after stereo rectification and
+the availability of depth at both endpoints of temporal correspondences.
+The encoder-stereo stage adapted from Passthrough+ operates on rectified
+views~\cite{chaurasia2020passthrough} and can recover depth only where both
+cameras observe the scene. EuRoC's nearly parallel camera pair is well suited
+to the common pinhole projection used here. TUM-VI's wide-angle images and
+Monado's varied headset camera arrangements require more adaptation to retain
+useful image support in that projection.
+
+A reanalysis of the archived pilot calibrations quantifies the coverage
+restriction. Of the calibrated, safe-radius-valid native left-image pixel
+centres, \SI{97.0}{\percent} project inside the chosen rectified image on
+EuRoC, compared with \SI{51.5}{\percent} on TUM-VI and
+\SIrange{58.4}{78.7}{\percent} across the tested Monado camera pairs.
+These fractions describe native-to-rectified image coverage. Temporal
+candidates outside this domain cannot obtain stereo depth through the
+implemented lookup, irrespective of the availability of temporal motion
+vectors. Raw image resolution alone does not explain the dataset choice:
+the Monado Index trials used $960\times960$ images, exceeding EuRoC's
+$752\times480$ resolution.
+
+The preliminary runs also show substantially less usable stereo-temporal
+support. After the stereo geometric checks, approximately
+\SIrange{74.1}{74.8}{\percent} of temporal candidates had depth at both
+endpoints on the two easy Machine Hall pilot sequences, compared with about
+\SI{43}{\percent} on TUM-VI room2 and room5 and
+\SIrange{6.4}{17.3}{\percent} on the four tested Monado sequences. Such
+missing depth prevents candidates from forming the 3D--3D correspondences
+required by this frontend. These coverage and support limitations motivated
+concentrating the final feasibility evaluation on EuRoC; further adaptation
+of rectification and codec-domain stereo to the other camera configurations
+lies outside its scope. The pilot observations concern the tested
+configurations and do not establish a general limitation of those datasets
+or of Passthrough+.
+
+\begin{table}[htbp]
+  \centering
+  \caption[EuRoC evaluation sequences]{EuRoC sequences used by the full-sequence evaluation.}
+  \label{tab:euroc-evaluation-set}
+  \begin{tabular}{@{}lllrl@{}}
+    \toprule
+    Alias & EuRoC sequence & Difficulty & Frames & Camera rate \\
+    \midrule
+    EMH01 & MH\_01\_easy      & Easy      & 3682 & \SI{20}{\hertz} \\
+    EMH02 & MH\_02\_easy      & Easy      & 3040 & \SI{20}{\hertz} \\
+    EMH03 & MH\_03\_medium    & Medium    & 2700 & \SI{20}{\hertz} \\
+    EMH04 & MH\_04\_difficult & Difficult & 2032 & \SI{20}{\hertz} \\
+    EMH05 & MH\_05\_difficult & Difficult & 2273 & \SI{20}{\hertz} \\
+    EV101 & V1\_01\_easy      & Easy      & 2912 & \SI{20}{\hertz} \\
+    EV102 & V1\_02\_medium    & Medium    & 1710 & \SI{20}{\hertz} \\
+    EV103 & V1\_03\_difficult & Difficult & 2149 & \SI{20}{\hertz} \\
+    EV201 & V2\_01\_easy      & Easy      & 2280 & \SI{20}{\hertz} \\
+    EV202 & V2\_02\_medium    & Medium    & 2348 & \SI{20}{\hertz} \\
+    EV203 & V2\_03\_difficult & Difficult & 1921 & \SI{20}{\hertz} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Encoded stereo and reverse-temporal streams are aligned by timestamp rather than
+row number. Where preprocessing produced a one-frame terminal mismatch, the
+unpaired terminal timestamp was omitted from the longer stream; no timestamp
+shift or hard common-length truncation was applied.
+
+\section{Compared Configurations}
+
+\begin{description}
+  \item[Stationary] Baseline that repeats the initial pose.
+  \item[TEASER++ only] Motion-vector method with TEASER++ and rigid-flow optimization, without forward-backward agreement or non-maximum suppression.
+  \item[Forward-backward] TEASER++-only method with reciprocal agreement and delayed confirmation.
+  \item[NMS] TEASER++-only method with age-prioritized suppression of indistinguishable measurements.
+  \item[Pixelless VO (PVO)] Proposed codec-only method using reciprocal checks,
+    age-prioritized suppression, TEASER++ registration, and rigid-flow
+    optimization.
+  \item[VOCA MV-first] Frozen reference~\cite{hilscher2026voca}. Codec motion vectors initialize the first
+    KLT pass; tracks not recovered in that pass are retried with unseeded optical
+    flow.
+  \item[VOCA OF-first] Frozen reference. Ordinary KLT optical flow is attempted
+    first; lost tracks are retried with motion-vector initialization.
+\end{description}
+
+The stationary baseline and the TEASER++-only estimator are distinct
+configurations. The VOCA MV-first and OF-first values are taken from their
+frozen full-sequence evaluations; diagnostic runs are not substituted for those
+trajectories.
+
+\section{Encoding and Preprocessing Configuration}
+
+All streams are encoded with FFmpeg 4.4.2 and \texttt{libx264} in the H.264
+High profile with \texttt{yuv420p} output. The enabled partitions are
+\texttt{p8x8}, \texttt{p4x4}, and \texttt{i8x8}. For the temporal streams,
+the remaining x264 options
+are \texttt{keyint=1000}, \texttt{me=umh}, \texttt{merange=64},
+\texttt{subme=6}, \texttt{bframes=0}, and \texttt{ref=1}. The encoder uses
+two-pass rate control at
+\SI{500}{\kilo\bit\per\second}. Images listed by each camera's timestamp CSV
+are supplied through FFmpeg's concat demuxer and encoded at 30 frames per
+second. This encoded rate controls the container timestamps but does not replace
+the EuRoC nanosecond timestamps used by the estimator and evaluation. H.264
+fractional motion is preserved using each vector's reported numerator and scale;
+no integer rounding is applied.
+
+For every camera, a reverse-temporal stream is made by reversing the same ordered
+image list and applying the identical temporal encoder settings. The extracted
+reverse vectors are subsequently inverted and remapped to the corresponding
+forward-time EuRoC timestamps. Forward and reverse files are required to contain
+the same number of frames as the synchronized dataset metadata.
+The single-reference configuration limits prediction dependencies within each
+encoded stream, but two-pass rate control and reversal of complete sequences
+make this preparation offline. No end-to-end real-time claim follows from
+\texttt{ref=1} or the absence of B-frames.
+
+Stereo preprocessing first applies the calibration-dependent common projection
+described in \autoref{chapter:method}. It then encodes twelve independent
+full-frame stereo streams: disparity shifts 0, 8, and 32 pixels crossed with
+grid phases $(0,0)$, $(4,0)$, $(0,4)$, and $(4,4)$ pixels. Each source stereo
+pair is expanded to an I-P-P triple and encoded at 90 frames per second with
+CRF 23. The temporal motion-search and partition settings are retained, while
+\texttt{keyint=3}, \texttt{min-keyint=3}, \texttt{scenecut=0},
+\texttt{bframes=0}, and \texttt{ref=1} enforce independent triples. The I-P-P
+reference structure and shift strategy are adapted from Passthrough+~\cite{chaurasia2020passthrough}; the mosaic layout,
+hardware encoder, and subsequent depth processing are not reproduced.
+
+Preprocessing verifies the frame type of every triple, equal timestamp order for
+the stereo pair, exact forward/reverse frame counts, the presence of all twelve
+shift combinations, and non-empty validity masks. The full command templates are
+given in \autoref{appendix:reproducibility}; the immutable evaluation manifest
+also records the exact FFmpeg version and hashes of the configurations used.
+
+\section{Estimator Configuration}
+
+All evaluated estimators are visual-only: IMU input and real-time enforcement are
+disabled. The proposed method uses a calibrated anchor/stereo pair, an absolute square-root QR
+linearization, square-root marginalization, at most seven retained keyframes
+plus the current pose after marginalization, and a keyframe connection-ratio threshold of 0.8. With the
+minimum-frames-after-keyframe parameter set to 1 and a strict counter test, a
+new keyframe can be requested only after more than one frame has elapsed.
+The Levenberg--Marquardt iteration-limit parameter is set to 7, with an
+initial damping value of $10^{-4}$. Joint-window visual factors use an observation
+standard deviation of 4 pixels and a Huber threshold of 0.5 pixels, applied to
+the residual norm before normalization. Rigid-flow factors are enabled for
+eligible observations in both the anchor and stereo cameras; host and
+ineligible observations retain absolute factors. Standard marginalization and
+lost-landmark removal
+remain active; the additional pre-marginalization filtering and second
+optimization pass evaluated in earlier experiments remain disabled.
+
+\autoref{tab:frozen-frontend-parameters} lists the selected PVO frontend thresholds. Before
+TEASER++ estimation, at most one stereo-temporal pair per
+$40\times40$-pixel cell is retained using the stereo matching cost. TEASER++
+uses fixed scale, a \SI{0.1}{\metre} noise bound, GNC-TLS rotation estimation,
+and heuristic maximum-clique inlier selection~\cite{yang2020teaser}. PVO enables the
+hybrid reciprocal-confirmation policy and indistinguishable-measurement
+suppression. At the original operating point, the four component-ablation
+configurations differ only in these two switches; their joint use is labelled
+``Joint frontend.'' PVO uses the same complete method with selected frontend
+thresholds and backend weights.
+
+\begin{table}[htbp]
+  \centering
+  \caption[Selected PVO frontend parameters]{Selected PVO compressed-domain frontend parameters.}
+  \label{tab:frozen-frontend-parameters}
+  \begin{tabular}{@{}lr@{}}
+    \toprule
+    Parameter & Value \\
+    \midrule
+    Median-filter grid / distance threshold & $16$ px / $5$ px \\
+    Stereo reprojection gate & $1.5$ px \\
+    Stereo epipolar gate & $0.005$ \\
+    Valid stereo depth interval & $(0.333,30]$ m \\
+    TEASER++ noise bound & $0.1$ m \\
+    Far-depth threshold / reprojection gate & $5$ m / $1.5$ px \\
+    Reciprocal cosine / minimum IoU & $0.98$ / $0.15$ \\
+    Reciprocal cycle-error gate & $1.5$ px \\
+    Single-endpoint tolerance in suppression model & $0.5625$ px \\
+    Suppression endpoint distance & $1.125$ px in $L_\infty$ \\
+    Confirmation age & 3 observations \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The numerical values above define the selected PVO operating point. A bounded
+twelve-candidate study varied reciprocal-agreement gates, suppression distance,
+Huber threshold, and observation standard deviation on all eleven sequences.
+The selected point gave the strongest typical-sequence trade-off: it had the lowest
+median ATE in the original sweep and remained preferable to the local variants
+around it. One local variant reduced median RTE-6 slightly but greatly enlarged
+the EV103 failure. Since selection and reporting use the same benchmark, the
+result is an in-sample operating point rather than a held-out estimate of
+generalization. The evaluated executable and configuration are identified by
+SHA-256 hashes in \autoref{appendix:reproducibility}.
+
+\section{Metrics and Aggregation}
+
+Absolute trajectory error (ATE) is reported in metres after a single rigid
+$\mathrm{SE}(3)$ alignment between the estimated and reference trajectories~\cite{umeyama1991least,sturm2012benchmark}.
+Relative translation error (RTE-6) is the translation error in metres over
+non-overlapping six-frame intervals~\cite{sturm2012benchmark}. At the nominal camera rate this corresponds
+to \SI{0.3}{\second}. Both per-sequence values are root mean square errors
+(RMSE), computed over associated positions for ATE and relative-pose intervals
+for RTE-6. ATE measures global trajectory consistency, whereas RTE-6
+measures short-horizon drift; a trajectory may therefore have small local errors
+that accumulate into a larger aligned ATE.
+
+The main tables report every sequence. Across-sequence summaries use the macro
+mean and median so that long sequences do not receive additional weight. The
+empirical cumulative distribution and the number of sequences completed are
+reported alongside these summaries because one failed sequence can dominate an
+arithmetic mean.
+
+Qualitative trajectory plots use the same single three-dimensional alignment
+as ATE, with scale fixed to one. They show the saved estimator-origin positions
+in two orthogonal projections, with equal metric axes and no separate fitting
+of the projections. Every saved estimate is retained, including boundary poses
+without a valid ground-truth association; available ground truth is shown over
+the saved time span. These views reveal path geometry but not the timing or
+cause of a failure, which requires the episode analysis below.
+
+\section{Ablation Studies}
+
+The component study contains four configurations at the original operating
+point: TEASER++ only, reciprocal forward-backward agreement only,
+age-prioritized non-maximum suppression only, and their joint use. Their encoded
+inputs, stereo processing, TEASER++ configuration, rigid-flow residual, backend
+settings, and evaluated timestamps are identical. ``Joint frontend'' denotes
+the complete method at the original parameter settings. ``PVO'' denotes the same
+method after selecting reciprocal-agreement thresholds, suppression distance,
+observation standard deviation, and Huber threshold. PVO is reported alongside
+the four controlled configurations as a parameter-selected variant of the
+complete method, rather than an additional component-ablation cell.
+
+A separate paired experiment isolates the backend observation model at the
+selected PVO operating point. It keeps the frontend, encoded inputs, stereo
+associations, robust registration, window, and loss parameters fixed, and
+changes only whether eligible temporal observations use conventional absolute
+reprojection factors or the two-camera rigid-flow factors of
+\autoref{eq:rigid-flow-residual}. This comparison is reported separately from
+the frontend component ablation because it evaluates a different interface in
+the estimator.
+
+\section{Track Characteristics}
+
+Track length is the number of frames in which one confirmed landmark ID is observed. Because admission is delayed until a third observation, provisional two-frame candidates that subsequently fail are counted separately rather than entered into the confirmed-track histogram. Results report the full distribution and survival proportions in addition to the mean, since a small long-lived tail can be hidden by a large number of short tracks. Track length is kept separate from trajectory error so that multiview support remains visible even when aggregate pose metrics appear similar.
+
+Spatial support is evaluated offline and is never supplied to the estimator.
+Shi-Tomasi corners are detected with quality level $0.01$, minimum distance 7,
+and block size 7. An observation is marked as structurally coincident when its
+motion-vector support rectangle contains at least one detected corner. The
+analysis reports both the fraction of codec regions containing a corner and the
+fraction of corners covered by their union. Raw temporal vectors, candidates
+with valid stereo depth at both endpoints, reciprocal candidates, TEASER++
+survivors, and suppression-retained candidates are reported separately. The
+last row also includes newly selected best-direction births, which remain
+provisional until reciprocal confirmation; it is therefore not a strict subset
+of the preceding reciprocal-consensus row.
+Quality levels $0.05$ and $0.10$ test whether the result is retained for
+stronger corner responses. These measurements are post-hoc diagnostics of the
+selected PVO run and do not affect its trajectory.
+
+Frontend counters are normalized by the evaluated frame count. Stereo support is
+reported as the fraction of queries that return a valid match, together with the
+availability of depth at consecutive track endpoints. The reported PVO track and
+depth distributions are computed from the selected PVO runs. Track statistics from reference
+frontends are used only where their trajectory reproduces the corresponding
+frozen reference result; non-equivalent diagnostic replays are excluded.
+
+\section{Failure Analysis}
+
+The saved full-sequence trajectories are inspected for large pose updates,
+sustained local error, stationary outputs during camera motion, and recovery.
+Each selected episode is examined with its preceding and subsequent frames.
+Interval boundaries follow the event being examined; they do not divide the
+sequences into equal time or distance bins. The selection is retrospective and
+illustrative. Contrasting intervals are included to test whether a proposed
+explanation also fits successful motion or fails in a different way.
+
+Local comparisons retain the non-overlapping six-frame intervals used by RTE-6.
+Their actual timestamps are used, since missing pose samples can change the
+duration of a six-frame interval. Adjacent-pose translation and rotation are
+also inspected to separate a single discontinuity from sustained error.
+Accumulated error after aligning the first associated pose illustrates what
+remains after local recovery; it is explicitly distinguished from the
+whole-trajectory alignment used for ATE. The archived absolute-residual
+ablation and VOCA OF-first reference are compared over identical timestamps
+after checking their complete trajectories against the frozen metrics.
+
+Timestamped diagnostics provide raw and selected candidate counts, emitted
+frontend IDs, IDs connected to existing landmarks, and optimization iterations.
+The connected count precedes creation of new landmarks. A stereo-valid
+candidate has passed the preceding filters and has depth at both temporal
+endpoints; a zero count at this stage does not isolate which preceding check
+failed. Eligibility for a rigid-flow factor likewise does not measure the
+number of independent geometric constraints. Full-sequence track lifetimes,
+query-success rates, and mean consecutive depth changes remain sequence-level
+summaries and are not attributed to individual events without timestamped
+evidence.
+
+Raw images, Shi-Tomasi corners, and an inverse-Laplacian sharpness proxy are
+used only for offline inspection. The sharpness proxy depends on texture and
+illumination as well as blur, so it is not treated as a direct measurement of
+motion blur. Stream frame types are checked where an interruption of temporal
+MVs is observed. These measurements help locate changes in the input and
+processing chain, while the interpretation separates observed events from
+possible causes that the recorded data cannot resolve.
+
+\section{Reproducibility}
+
+The PVO implementation is based on commit \texttt{29d09aa0b14e}. The selected
+evaluation executable and selected configuration are identified by hashes because
+the suppression distance was exposed as an evaluation-time parameter after that
+base revision. The evaluation manifest records these hashes, the FFmpeg and Python versions, the
+eleven canonical dataset identifiers, and the commands used to regenerate the
+tables and plots. Intermediate data are retained outside the thesis source; the
+PDF figures included here are immutable exports of that bundle. Missing values
+are not imputed, and results from binaries that fail the selected-trajectory
+consistency check are omitted.

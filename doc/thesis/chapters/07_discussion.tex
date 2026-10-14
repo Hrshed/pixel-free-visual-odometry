@@ -1,0 +1,313 @@
+% !TeX root = ../main.tex
+
+\chapter{Discussion}\label{chapter:discussion}
+
+\section{Answers to the Research Questions}
+
+\paragraph{RQ1: remaining trajectory accuracy.}
+The accuracy difference from the closest higher-information reference is
+reported directly. For an error measure $e$, let
+\begin{equation}
+  \Delta e_{\mathrm{abs}} = e_{\mathrm{PVO}}-e_{\mathrm{MV\text{-}first}},
+  \qquad
+  \Delta e_{\mathrm{rel}} =
+  100\frac{e_{\mathrm{PVO}}-e_{\mathrm{MV\text{-}first}}}
+  {e_{\mathrm{MV\text{-}first}}}.
+  \label{eq:pvo-reference-error-difference}
+\end{equation}
+Positive values mean that PVO has greater error. For the easy group, the
+differences between group macro means are \SI{0.334}{\metre} and 201.3\% for ATE, and
+\SI{0.0101}{\metre} and 49.6\% for RTE-6. The small RTE-6 difference shows that
+local motion can remain close to the MV-first reference on easier motion even
+when the accumulated trajectory differs more strongly. Across the benchmark,
+the gap grows and is dominated by several difficult sequences; EV203 is the
+exception on which PVO has lower ATE and RTE-6 than MV-first. PVO nevertheless
+improves on the stationary baseline in both metrics on nine of eleven
+sequences. The relative differences must be read together with the absolute
+ones because division by a small reference error can produce a large
+percentage from a modest metric displacement.
+
+\begin{table}[htbp]
+  \centering
+  \caption[Trajectory-error differences between PVO and VOCA MV-first]{Absolute and percentage differences between the group macro means
+  of PVO and VOCA MV-first. Positive values indicate greater PVO error.
+  Difficulty groups follow the EuRoC sequence labels.}
+  \label{tab:pvo-mv-first-error-differences}
+  \begin{tabular}{@{}lrrrr@{}}
+    \toprule
+    Group & $\Delta$ATE [m] & $\Delta$ATE [\%] & $\Delta$RTE-6 [m] & $\Delta$RTE-6 [\%] \\
+    \midrule
+    Easy & 0.334 & 201.3 & 0.0101 & 49.6 \\
+    Medium & 1.091 & 796.6 & 0.0811 & 507.3 \\
+    Difficult & 4.341 & 165.3 & 0.2954 & 72.4 \\
+    All sequences & 1.998 & 189.7 & 0.1332 & 83.2 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{RQ2: stereo-temporal persistence and support.}
+Persistent identities can be assembled without pixel descriptors, but their
+typical lifetime is short. Across the benchmark, PVO confirms
+5,230,916 tracks with a median length of three frames and a 95th percentile of
+five frames. Only 9.92\% reach five frames. Stereo support is likewise uneven:
+Between 13.48\% and 19.88\% of queries return a match on EMH01, EMH02, and EV101, whereas
+the rate is at most 1.99\% on EV201 to EV203. In the separate structure
+diagnostic, the proportion of codec supports that contain a Shi-Tomasi corner
+changes across valid stereo, reciprocal agreement, robust registration, and
+suppression: 30.59\% for raw vectors, 37.45\% with valid endpoint depth, 34.38\%
+after reciprocal agreement, 39.57\% after TEASER++, and 44.54\% in the branched
+suppression-retained pool. Robust registration therefore concentrates its input
+near two-directional image structure, but most individual tracks still offer
+little multiview support.
+
+\paragraph{RQ3: properties associated with failure.}
+The episode analysis identifies several distinct events
+(\autoref{sec:failure-episodes}). EMH04 develops sustained drift while the
+view becomes dark and sparsely detailed, despite abundant stereo-valid
+candidates. EMH03 has a brief burst during rapid motion with substantially
+fewer retained connections than another, slightly faster interval with similar
+corner support. EV103 suffers a catastrophic pose update, temporary stationary
+outputs, and recovery of local motion without recovery of the accumulated
+trajectory. EV202 supplies both low-motion jumps and a failure in a
+corner-rich view. Visible structure, observation availability, and usable
+temporal geometry are therefore different quantities.
+
+The paired residual comparison further limits the explanations. EMH03 and
+EMH04 retain their selected failures with absolute reprojection, while EV103's
+catastrophic error is much smaller. Another EV202 jump is worse with absolute
+reprojection. The recorded events establish when support is lost and how the
+estimated motion changes; they do not identify one cause shared by every
+sequence. Track lifetime and consecutive-depth summaries provide context but
+cannot explain an individual event without its temporal evidence.
+
+\section{Operating Envelope}
+
+The clearest feasibility evidence is the recovered trajectory geometry on the
+easy sequences, particularly the Machine Hall views in
+\autoref{sec:trajectory-geometry}. The reported PVO results on EMH01 and EV101
+also show low accumulated error. Improvement over a stationary prediction on
+all four easy sequences provides a broader check that the estimates contain
+motion information. PVO also improves on all three medium sequences, although
+the quality varies substantially. The EV202 margin is small: \SI{2.087}{\metre} ATE and
+\SI{0.2078}{\metre} RTE-6 versus stationary values of \SI{2.111}{\metre} and
+\SI{0.2441}{\metre}. The difficult set is mixed rather than uniformly
+unsuccessful, with improvements on EMH04 and EMH05 but not on EV103 or EV203.
+
+This grouping should not be read as a calibrated scale of codec difficulty.
+The EuRoC labels summarize the original sequence challenge, not the quality of
+H.264 prediction blocks or compressed-domain stereo. EV201 is labelled easy yet
+has substantially lower stereo yield than the other easy sequences. Conversely,
+local drift can remain moderate while small errors accumulate into a poor
+global trajectory. The evidence supports an operating envelope for the fixed
+EuRoC cameras, calibrations, and encoder configuration; it does not establish
+the same boundary for other cameras, frame rates, codecs, or encoder searches.
+
+\section{Track Persistence and Geometric Support}
+
+The three-observation median is only one observation longer than the provisional
+period required for confirmation. Consequently, most accepted landmarks supply
+little temporal baseline before disappearing. This limits the number of views
+that can jointly constrain a point and reduces the opportunity to average block
+quantization and stereo-depth errors. The small tail of longer tracks shows that
+identity persistence is possible, with a maximum of 204 frames, but that tail is
+too sparse to characterize the typical backend input.
+
+Stereo availability is one bottleneck rather than a complete explanation. A
+continuation needs geometrically acceptable support, and a new identity also
+needs depth at both endpoints before it can enter the robust 3D registration.
+The low query yield on EV201 to EV203 therefore removes many potential
+associations early. Conditional consecutive-depth changes are small among
+points for which both depths exist, but this statistic says nothing about the
+larger set with missing depth. Track loss can additionally reduce the connected
+landmark ratio and request keyframes more frequently. Standard window
+optimization and marginalization preserve information from accepted factors,
+but they cannot recreate missing multiview observations.
+
+The offline structure analysis provides a complementary result. Requiring valid
+stereo at both endpoints, reciprocal agreement, and TEASER++ consensus changes
+the fraction of regions containing a Shi-Tomasi corner at each stage. This
+indicates whether geometric selection concentrates observations near
+two-directional image structure without explicitly detecting it. It does not
+show that each codec support contains one uniquely localized physical point,
+and the diagnostic corner coordinates are never used by the estimator.
+
+A quantitative lifetime comparison with the VOCA MV-first and OF-first
+configurations is deliberately omitted. The diagnostic build instrumented for
+track lifetimes did not reproduce their frozen trajectories, so its counters
+would not describe the same configurations as the ATE and RTE-6 tables. The
+qualitative expectation that pixel-refined tracking supplies
+more precisely localized and longer-lived observations remains plausible, but
+is not used here as a measured result.
+
+\section{Error Modes}
+
+The observed failures differ both in duration and in their relation to support.
+EMH04 continues estimating motion with many observations but accumulates a large
+orientation error. EV103's full-sequence RTE-6 is dominated by one catastrophic
+window, followed by a period without emitted observations. These require
+different explanations: the first calls into question the information supplied
+by the surviving geometry, whereas the second also exposes the estimator's
+response to an abrupt shortage of connections. Neither can be adequately
+described by the full-sequence mean track length.
+
+The observation-model ablation adds the same qualification at the backend.
+Rigid flow lowers ATE on eight sequences, RTE-6 on seven, and both medians, but
+its EV103 failure makes both macro means worse than absolute reprojection
+(\autoref{tab:residual-ablation}). Replacing eligible absolute factors with
+displacement factors lowers the median errors in this experiment, while
+absolute initialization and fallback observations remain part of the estimator.
+The replacement does not by itself guard against an erroneous correspondence
+set or a poorly conditioned trajectory.
+
+Two observation-level failures are directly visible before the later gates are
+applied. First, local codec support can disappear while the tracked image
+structure remains visible and raw temporal vectors remain elsewhere
+(\autoref{fig:mv-abrupt-stop-example}). The responsible encoder decision is
+unresolved in this example. Second, a codec block and its vector can
+remain available while a localized appearance inside the source block is no
+longer contained by the predicted destination block
+(\autoref{fig:mv-feature-departure-example}). The latter is possible because the
+encoder optimizes prediction of an extended block rather than persistence of a
+particular scene point. These cases explain why raw-vector availability alone
+does not establish a valid feature track.
+
+In the separate EV103 episode, frame-type inspection identifies I-frames at the
+relevant endpoints in both encoding directions, explaining the absence of ordinary
+temporal vectors for that transition. Subsequent
+P-frames restore raw candidates before useful frontend support returns. This
+distinguishes an identified input interruption from the later losses whose
+individual causes are not recorded. Similarly, EMH04's dark views suggest
+ambiguous block predictions, but the saved logs cannot separate temporal-vector
+bias from incorrect depth or an unfavorable distribution of points.
+
+TEASER++ success does not by itself resolve those uncertainties. Its role is to
+find a rigid transformation consistent with a subset of putative
+associations~\cite{yang2020teaser}; such consistency does not independently
+establish correspondence to the true scene. The implementation reports
+successful registration throughout EMH04 even while the trajectory diverges.
+Additional per-frame inlier geometry and residual diagnostics would be needed
+to assess conditioning or identify coherent incorrect associations. The
+present evidence does not establish that moving objects, calibration error,
+or a particular depth distribution caused these episodes.
+
+The median filter targets isolated compression artefacts, reciprocal agreement
+tests temporal reversibility, TEASER++ rejects inconsistent 3D pairs, and
+age-prioritized suppression removes indistinguishable duplicate support. These
+stages address different symptoms. Their non-monotonic ablation results suggest
+that stricter rejection can also discard useful constraints. The case studies
+show where these distinctions matter, while identifying questions that the
+available diagnostics cannot answer.
+
+\section{Meaning of Pixel-Free Operation}
+
+The information restriction applies to the tracking frontend and pose estimator. They
+consume H.264 motion-vector side data, prediction-block geometry, timestamps,
+camera calibration, rectification transforms, and validity masks. They do not
+load decoded intensities, build image pyramids, detect corners, evaluate patches,
+compute descriptors, or apply a photometric residual. Shi-Tomasi and blur
+measurements are computed only after evaluation for diagnosis.
+
+The restriction does not claim that the entire data-production process is
+image-free. Decoded stereo images are remapped during offline rectification and
+are then supplied to the video encoder. This conventional preprocessing creates
+the H.264 streams on which the experiment operates. The resulting statement is
+therefore precise: after calibrated offline rectification and encoding,
+the frontend and pose estimator use codec side information and geometry without
+consulting image intensities. The extraction software used here decodes frames
+and reconstructs images internally, but does not forward those pixels to the
+tracking frontend.
+
+\section{Placement of Analysis and Transmission}\label{sec:cta-compatibility}
+
+The communication boundary can be placed at several stages of the codec-based
+frontend. Sending the required coded streams follows CTA: the capturing device
+encodes, and the receiver extracts motion vectors and estimates camera motion.
+Conventional CTA follows decoding with image-based feature extraction or
+tracking~\cite{hofer2023h264cta}; here the frontend uses codec metadata directly.
+
+Alternatively, the capturing device could extract the vectors and perform some
+of the correspondence filtering before transmission. It could send temporal
+and stereo observations for the remaining geometric checks, or run the frontend
+locally and send confirmed observations to a remote backend. Analysis would then
+precede the compression and transmission of the geometric data, giving an
+ATC-like allocation of work while retaining codec-derived measurements. These
+options extend the processing--communication choice described in the CTA--ATC
+literature~\cite{redondi2016cta} to different stages of this frontend.
+
+The transmitted representation must preserve the information needed after the
+chosen boundary. Early motion-vector observations require block support,
+reference information, timestamps, and calibrated geometry. A later split at
+the frontend output would require shared calibration, consistent track identities,
+per-camera coordinates, measured displacements, and predecessor timestamps,
+with frontend and backend state maintained on their respective devices.
+Filtering reduces the set of retained candidates, but the resulting bitrate also
+depends on their metadata and encoding. The experiments do not implement or
+measure these transport alternatives.
+
+The evaluated input consists of two forward temporal streams, two reversed
+temporal streams, and twelve shifted stereo streams. Preparing those additional
+encodings has a cost. Two-pass temporal encoding and the current reversal of
+complete frame lists make preparation an offline procedure, despite the
+single-reference, B-frame-free prediction structure within each stream.
+A live deployment must establish how the observations are generated and
+delivered within its latency and throughput budget. Efficient metadata
+extraction must also account for the pixel reconstruction performed by the
+current decoder.
+
+Passthrough+ motivates dedicated codec hardware with platform-specific power
+budgets~\cite{chaurasia2020passthrough}. The present software-encoded experiments
+establish geometric feasibility. Net energy savings depend on all preparation,
+communication, extraction, and estimation. Reusing motion from an already
+required stream has a different incremental cost from generating extra stereo
+encodings. Sending an unchanged stream also preserves its bitrate; filtering
+and transmitting geometric observations is a separate design choice.
+
+\section{Validity and Limitations}
+
+The evaluation covers all eleven EuRoC sequences, but only one benchmark, one
+stereo camera family, and the provided calibrations. The result is also tied to
+FFmpeg 4.4.2, \texttt{libx264}, H.264 High profile, the fixed temporal encoding,
+and the twelve shifted I-P-P stereo streams. Hardware encoders or other search,
+partition, bitrate, GOP, and colour-format choices may expose different motion
+vectors. Passthrough+'s hardware mosaic, densification, pose-assisted temporal
+depth propagation, and rendering stages are not reproduced. In particular, the
+original full proxy assumes headset poses from an independent SLAM system,
+which would violate the information restriction here. The stereo component is
+therefore an adaptation rather than a complete replication of that system.
+
+The selected PVO parameters were chosen after a bounded twelve-candidate sweep
+on the same eleven sequences used for reporting. The final tables exclude
+abandoned searches, but the evaluation is therefore not an independently
+held-out benchmark study. The failure episodes are also selected retrospectively
+and do not estimate the prevalence of a failure mechanism. Their successful
+comparisons and counterexamples constrain the interpretation, but changing
+views, illumination, motion, and available geometry remain coupled. The paired
+residual ablation controls the observation model; image inspection and
+timestamped counters alone are not equivalent to a controlled intervention.
+
+The static-scene model, two-camera depth construction, calibrated
+synchronization, and available ground truth further delimit the conclusions.
+The system has no explicit mechanism for rolling shutter, independently moving
+objects, calibration drift, or lost synchronization. A validity mask excludes
+undefined rectification regions, but no image-derived confidence is available
+inside valid regions.
+
+\section{Comparison with Pixel-Refined References}
+
+The VOCA MV-first configuration~\cite{hilscher2026voca} uses codec motion to
+initialize KLT, followed by an unseeded optical-flow fallback. The VOCA OF-first
+configuration attempts unseeded KLT first and uses motion-vector initialization
+when tracks are lost. Both therefore receive information that the proposed
+estimator intentionally omits.
+Their median ATE values, \SI{0.200}{\metre} and \SI{0.118}{\metre}, are well
+below PVO's \SI{1.082}{\metre}; their median RTE-6 values are
+\SI{0.0163}{\metre} and \SI{0.0155}{\metre}, compared with
+\SI{0.0818}{\metre}. The absolute and percentage differences from MV-first are
+summarized in \autoref{tab:pvo-mv-first-error-differences}. This accuracy gap
+remains substantial even though the MV-first reference fails on EV203.
+
+These references contextualize the accuracy available with pixel-based
+localization and refinement. PVO's nine improvements over the stationary baseline
+demonstrate useful motion information under the pixel-free restriction. The
+accuracy gap also includes differences in correspondence construction, filtering,
+and observation models, so it does not isolate the effect of pixel refinement.

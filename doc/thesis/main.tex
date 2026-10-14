@@ -1,0 +1,67 @@
+\RequirePackage[l2tabu,orthodox]{nag}
+
+% The one-sided layout is retained for the submitted draft.
+%\documentclass[headsepline,footsepline,footinclude=false,fontsize=11pt,paper=a4,listof=totoc,bibliography=totoc,BCOR=12mm,DIV=12]{scrbook} % two-sided % original source stated: BCOR=12mm,DIV=12
+\documentclass[headsepline,footsepline,footinclude=false,oneside,fontsize=11pt,paper=a4,listof=totoc,bibliography=totoc,DIV=12]{scrbook} % one-sided
+
+% Bibliography and citation styling are defined centrally in settings.tex.
+\input{settings}
+
+\newcommand*{\getUniversity}{Technische Universität München}
+\newcommand*{\getFaculty}{Department of Informatics}
+\newcommand*{\getTitle}{On the Feasibility of Pixel-Free Visual Odometry Using Video Codec Motion Vectors}
+\newcommand*{\getTitleGer}{Zur Machbarkeit pixelfreier visueller Odometrie mit Bewegungsvektoren aus Videocodecs}
+\newcommand*{\getAuthor}{Emir Özer}
+\newcommand*{\getDoctype}{Master's Thesis in Informatics}
+\newcommand*{\getSupervisor}{Mateo de Mayo}
+\newcommand*{\getExaminer}{Daniel Cremers}
+\newcommand*{\getSubmissionDate}{23 September 2026}
+\newcommand*{\getSubmissionLocation}{Munich}
+
+\hypersetup{pdftitle={\getTitle},pdfauthor={\getAuthor}}
+
+\begin{document}
+
+% English is the main thesis language.
+%\selectlanguage{ngerman}
+\selectlanguage{english}
+
+% Set page numbering to avoid "destination with the same identifier has been already used" warning for cover page.
+% (see https://en.wikibooks.org/wiki/LaTeX/Hyperlinks#Problems_with_Links_and_Pages).
+\pagenumbering{alph}
+\input{pages/cover}
+
+\frontmatter{}
+
+\input{pages/title}
+\input{pages/disclaimer}
+\input{pages/acknowledgements}
+\input{pages/abstract}
+\microtypesetup{protrusion=false}
+\tableofcontents{}
+\microtypesetup{protrusion=true}
+
+\mainmatter{}
+
+\input{chapters/01_introduction}
+\input{chapters/02_background}
+\input{chapters/03_related_work}
+\input{chapters/04_method}
+\input{chapters/05_experimental_methodology}
+\input{chapters/06_results}
+\input{chapters/07_discussion}
+\input{chapters/08_conclusion}
+
+\appendix{}
+
+% Reproducibility material and supplementary results follow as appendices.
+\input{pages/appendix}
+
+\microtypesetup{protrusion=false}
+\listoffigures{}
+\listoftables{}
+\microtypesetup{protrusion=true}
+\printglossaries
+\printbibliography{}
+
+\end{document}

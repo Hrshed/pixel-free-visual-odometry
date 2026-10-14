@@ -1,0 +1,129 @@
+% !TeX root = ../main.tex
+
+\chapter{Introduction}\label{chapter:introduction}
+
+\section{Motivation}
+
+For cameras on wearables, embedded systems, and lightweight drones, useful
+localisation must fit within a limited power and computation budget. Video
+encoding offers an attractive resource for this purpose: H.264 has a mature,
+widely deployed hardware ecosystem, and its encoders already perform motion
+estimation to compress successive images~\cite{hilscher2026voca}. A geometric
+estimator that can use these motion estimates could benefit from an accelerator
+already available in many camera pipelines.
+
+The appeal of dedicated hardware is concrete. One reported mobile-platform
+example contrasts an \SI{80}{\milli\watt} power budget for specialized
+video/audio hardware with \SI{1000}{\milli\watt} for a
+CPU~\cite{chaurasia2020passthrough}.
+These platform-specific budgets motivate treating video encoding as a source of
+useful visual computation. Once the encoder has searched for matching blocks,
+its output contains correspondence information that an odometry system could
+reuse. Such correspondences can connect the two views of a stereo camera or
+track scene structure across successive images. Reusing them for stereo
+matching and temporal tracking is therefore a plausible route to reducing
+the additional work required for localisation.
+
+This opportunity fits naturally into a \emph{compress-then-analyze} (CTA)
+architecture. A camera device can encode its observations and send the coded
+streams to a companion phone for analysis~\cite{hofer2023h264cta,hilscher2026voca}.
+Compression makes that communication practical, but the receiving phone still
+has to infer motion from what arrives. If codec correspondences themselves
+support odometry, the receiver can perform geometric estimation without first
+building a pixel-based tracking frontend. The potential benefit is thus shared
+across the system: dedicated coding hardware supplies motion information, the
+link carries a compressed representation, and the receiver reuses that
+information for localisation.
+
+The representation also offers flexibility in where analysis is performed.
+A device with spare computation could filter codec correspondences before
+transmission and send the surviving observations, while a more constrained
+camera could leave that work to its receiver. This makes the balance between
+local computation and communication a design choice, as motivated by the
+trade-off between CTA and \emph{analyze-then-compress}
+(ATC)~\cite{redondi2016cta}. The choice is especially relevant when
+a receiving phone must share its energy and thermal budget with other tasks.
+
+The geometric feasibility of this idea is the prerequisite examined here:
+\emph{do codec motion vectors retain enough information for useful camera
+tracking without pixel-based refinement?} Their compression-oriented block
+matches need not be accurate or persistent enough for this purpose. Demonstrating
+a workable odometry construction would establish a reason to explore systems
+built around this widely available computational resource. This thesis provides
+one such construction and studies where its geometric information is sufficient.
+
+\section{Problem Statement and Scope}
+
+We consider calibrated stereo visual odometry using H.264 side information,
+without decoded image intensities in tracking or geometric estimation, IMU
+measurements, GPS, or an external pose prior. Rectification and encoding use
+pixels during offline stream preparation. The frontend and estimator consume
+motion-vector metadata, calibration, rectification masks, and timestamps. The
+term \emph{pixel-free} applies to this estimation boundary.
+
+The H.264 encodings use a single reference frame (\texttt{ref=1}) and disable
+B-frames (\texttt{bframes=0}). In each temporal stream, inter-frame prediction
+uses the preceding encoded view; stereo correspondence uses independent
+I-P-P triples. This short reference structure is relevant to live systems,
+where observations must be available with limited delay. It does not make
+the present input preparation a live pipeline: the experiments use two-pass
+encoding and reverse complete image sequences to obtain reciprocal vectors.
+
+The restriction exposes difficulties that pixel refinement can otherwise
+resolve. Codec vectors describe block-wise prediction decisions rather than
+persistent scene points, their spatial support depends on the partition
+structure, and their values are selected for compression rather than physical
+motion~\cite{young2020fast,hilscher2026voca}. This study investigates one
+construction that recovers stereo depth, validates temporal associations,
+maintains identities, and integrates block-displacement observations into a
+point-based estimator.
+
+The experiments establish an analysis interface and its geometric performance.
+They use prepared temporal, reverse-temporal, and shifted stereo streams;
+a live hardware encoder, wireless link, and receiving phone are outside the
+experimental setup. The costs of producing and transporting those inputs must
+therefore be included when assessing a future distributed deployment.
+
+\section{Research Questions}
+
+\begin{enumerate}
+  \item How much odometric accuracy remains when temporal correspondence tracking uses raw codec motion vectors without pixel-domain refinement?
+  \item To what extent can block-based codec motion vectors form persistent,
+        geometrically useful stereo-temporal tracks?
+  \item How are the properties of the resulting tracks and input sequences related to variation in odometric accuracy?
+\end{enumerate}
+
+\section{Contributions}
+
+Pixelless VO (PVO) provides a concrete feasibility demonstration through one
+stereo pipeline. It combines codec-derived depth, persistent geometric
+association, and a displacement-based observation model. Evaluation on all
+eleven sequences of the established EuRoC MAV
+benchmark~\cite{burri2016euroc} relates trajectory accuracy to the availability and
+persistence of codec observations. The trajectory visualizations in
+\autoref{sec:trajectory-geometry}, especially the easy Machine Hall sequences,
+show the central result: reasonable tracking can be recovered from motion
+vectors without pixel refinement. The reported PVO errors on EMH01 and EV101
+provide further quantitative evidence of this geometric information.
+
+These results support further exploration of pixel-free odometry and flexible
+placement of codec-based analysis between capturing and receiving devices.
+The particular stereo construction, filters, and backend are one way to test
+that possibility. The measured limitations identify where alternative
+constructions could improve accuracy, robustness, or the cost of preparing the
+codec inputs.
+
+\section{Thesis Structure}
+
+Chapter~\ref{chapter:background} introduces the camera geometry, bundle-adjustment,
+codec, and robust-registration concepts used throughout the thesis.
+Chapter~\ref{chapter:related-work} positions the examined system with respect to
+compressed-domain motion estimation, codec-aware tracking, and motion-vector
+reconstruction. Chapter~\ref{chapter:method} describes the PVO compressed-domain
+frontend and its integration into the visual-odometry backend.
+Chapter~\ref{chapter:experimental-methodology} defines the reported configurations,
+dataset, metrics, and diagnostic protocol, and Chapter~\ref{chapter:results} reports
+the resulting trajectory and frontend measurements. Finally,
+Chapter~\ref{chapter:discussion} interprets the operating envelope and limitations,
+before Chapter~\ref{chapter:conclusion} summarizes the findings and identifies
+directions for future work.

@@ -1,0 +1,97 @@
+% !TeX root = ../main.tex
+
+\chapter{Conclusion and Future Work}\label{chapter:conclusion}
+
+\section{Conclusion}
+
+This thesis demonstrates that video encoding can supply the geometric
+observations needed for useful visual odometry. Motion estimation performed for
+compression can also support camera tracking without a separate pixel-based
+correspondence frontend. The successful trajectories, most clearly on the easy
+Machine Hall sequences, establish that this reuse is feasible. Their significance
+is that a representation produced for video coding can serve as the measurement
+source for geometric estimation.
+
+This opens a route to repurposing widely available video-encoding accelerators
+for the odometry component of a SLAM system. The demonstrated method is naturally
+compatible with compress-then-analyze at its analysis interface: a capturing
+device can provide the prepared coded streams, and a receiver can estimate motion
+from their codec metadata and calibration. The receiving device need not repeat
+correspondence estimation on image intensities. For a small camera paired with a
+phone, this offers a way to build localisation around existing coding resources
+and the communication structure already used for compressed video.
+
+The pipeline also permits other choices of where to place the communication
+boundary. Its filtering and geometric validation stages expose intermediate
+observations that could be transmitted instead of the video streams. A capturing
+device could extract motion vectors, perform some of that analysis locally,
+and then compress and send the retained correspondences for further estimation.
+Such a division resembles analyze-then-compress at the transmission boundary,
+while still obtaining its initial measurements through video compression. It
+therefore need not be assigned exclusively to either CTA or ATC: the same
+codec-based analysis principle supports a range of allocations between camera
+and receiver. The useful split would depend on local computation, link capacity,
+and the information required by the remaining estimation stages.
+
+The contribution is a feasibility demonstration for this design direction.
+The present software-encoded experiments establish useful geometric information;
+their accuracy limits leave room for different correspondence constructions and
+estimators. Hardware execution and intermediate-data transport remain systems
+work to evaluate. What the thesis establishes is a basis for that work: visual
+odometry can be built from codec-generated motion information, making existing
+video-processing resources relevant to localisation as well as communication.
+
+\section{Future Work}
+
+A first priority is a causal hardware implementation that connects a constrained
+capturing device to a receiving phone. The current two-pass temporal encoding
+needs a streaming alternative. Offline reverse-temporal streams must be
+replaced by bounded buffering or another causal mechanism, and
+the shifted stereo inputs must be scheduled within the encoder's throughput
+and latency limits. A mosaic construction, fewer pre-shifts, or another means
+of obtaining depth could reduce input-preparation cost. Access to motion-vector
+metadata should also be measured directly, including any image reconstruction
+performed inside the extraction path.
+
+The resulting system should be evaluated for energy per processed stereo pair,
+power, latency, transmission rate, and trajectory accuracy at the same operating
+point. Measurements should include rectification, every additional encode,
+memory movement, the radio link, metadata extraction, and estimation on both
+devices. Comparing image-based CTA, codec-based CTA, and capture-side feature
+extraction would test when the proposed allocation is beneficial. This follows
+the processing--communication trade-off demonstrated by Redondi et
+al.~\cite{redondi2016cta}, rather than transferring a hardware power figure to
+a different complete workload. Sending an ordinary coded stream and sending a
+dedicated motion-vector payload are separate transport options to evaluate.
+
+A second priority is to improve the geometric observations while preserving
+the pixel-free estimation boundary. The stereo examples show how grid phases
+refine spatial sampling and how pre-shifts can make depth available at different
+locations. Future work could select these transforms adaptively, compare hardware
+encoder motion fields, and account more explicitly for block support and
+measurement uncertainty. Observation models and association rules should be
+judged by their ability to retain geometrically valid connections as well as
+by their trajectory error. A longer assigned track alone does not establish
+that it follows the same scene point.
+
+The preliminary experiments discussed in
+\autoref{appendix:prior-experiments} also motivate maintaining surface or
+region identities while their supporting codec correspondences change.
+Such representations could reduce dependence on long-lived point tracks,
+provided that their association and geometry constrain camera motion.
+
+Registered RGB-D measurements offer a complementary experiment. Replacing the
+codec-stereo stage with sensor depth would help separate temporal motion-vector
+limitations from missing stereo support, while keeping temporal tracking free
+of image-intensity access. This would be a different information setting from
+the stereo system studied here, and would test whether the same analysis
+principle is useful with another depth source.
+
+Finally, evaluation should extend to other cameras, encoders, and motion
+patterns, including controlled exploration and mapping routes. Such tasks can
+make moderate, repeatable motion an operational choice, motivating study of
+where the favourable tracking seen here is useful. Tests under rapid rotation,
+blur, low texture, and changing illumination would establish the limits of that
+use. The present method provides a starting point for these investigations:
+codec motion can sustain useful camera tracking, and efficient systems built
+around that information are worth exploring further.

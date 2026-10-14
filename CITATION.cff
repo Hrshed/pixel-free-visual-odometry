@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "Please cite the thesis when using this implementation."
+type: software
+title: "On the Feasibility of Pixel-Free Visual Odometry Using Video Codec Motion Vectors"
+authors:
+  - family-names: "Özer"
+    given-names: "Emir"
+date-released: 2026-10-15
+repository-code: "https://github.com/Hrshed/pixel-free-visual-odometry"
+license: BSD-3-Clause
+abstract: "Thesis software for visual odometry from video-codec motion vectors, combining codec stereo, geometric track association, and rigid-flow bundle adjustment. Document and dataset rights are described separately in NOTICE.md."

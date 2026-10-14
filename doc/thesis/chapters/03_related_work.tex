@@ -1,0 +1,177 @@
+% !TeX root = ../main.tex
+
+\chapter{Related Work}\label{chapter:related-work}
+
+\section{Compression and the Placement of Visual Analysis}
+
+Compress-then-analyze and analyze-then-compress allocate different work to a
+capturing device and its receiver. Hofer et al.~\cite{hofer2023h264cta}
+investigate H.264 transmission for edge-assisted visual SLAM, evaluating
+encoding, transmission, decoding, and feature-analysis latency on a Raspberry
+Pi and an Intel NUC. Their software OpenH264 experiments motivate transmitting
+compressed video when capture-side feature extraction is costly; they evaluate
+the coding pipeline independently of a complete SLAM system and do not measure
+energy consumption.
+
+Redondi et al.~\cite{redondi2016cta} compare JPEG-based CTA and BRISK-feature ATC
+for image recognition in visual sensor networks. Their measurements and network
+evaluation relate recognition accuracy, transmission rate, and camera-node
+energy. The outcome depends on the hardware, feature workload, and link
+constraints. These studies motivate the allocation of visual computation; the
+present thesis investigates what the receiver can infer directly from codec
+motion without a pixel-based correspondence stage.
+
+\section{Motion-Vector Refinement into Optical Flow}
+
+Young, Girod, and Taubman~\cite{young2020fast} recover a dense optical-flow field from block-based coded motion using confidence-weighted filtering and inpainting. Prediction-unit dimensions inform the confidence model, while decoded image colours guide edge-preserving filtering; optional variational refinement additionally uses image gradients, temporal intensity differences, and warping. This work characterizes how codec motion can initialize a more accurate flow estimate, but its recovered flow is a pixel-guided product rather than a codec-only geometric observation.
+
+\section{Codec-Aware Tracking}
+
+VOCA~\cite{hilscher2026voca} uses H.264 motion vectors as initialization priors
+for KLT tracking. The codec prediction moves the initial estimate closer to the
+subsequent photometric solution, while KLT refinement and conventional tracking
+modes retain access to decoded image intensities. VOCA provides the implementation
+context and the reference configurations used in this thesis, but does not
+impose the same pixel-access restriction.
+
+\section{Motion Vectors for Camera Motion and Mapping}
+
+Li and Song~\cite{li2014toward} estimate monocular camera motion and planar scene
+structure from MPEG motion vectors. Their formulation explicitly assumes a
+structured environment dominated by planes, such as building facades and paved
+roads. It merges direct and bidirectional-frame observations, rejects
+insufficient-parallax motion, groups correspondences with homography RANSAC, and
+jointly tracks planes and camera motion in an extended Kalman filter. It thus
+establishes an early codec-only navigation result within this planar setting,
+rather than a general point-based reconstruction. Its B-frame observations also
+depend on subsequent anchor images: they cannot be formed as soon as each
+intermediate image is captured, introducing buffering and latency for a live
+camera. The paper does not establish end-to-end real-time operation. These
+constraints concern both the required scene structure and the availability of
+the measurements, independently of the estimator's computational cost.
+
+MoV-SLAM~\cite{turner2023movslam} uses H.264 macroblocks and their motion vectors to build long-range correspondence tracks within a complete monocular and stereo SLAM system. Its EXPRESS detector evaluates block intensities to select distinctive regions, while Lucas-Kanade tracking handles missing motion-vector coverage and stereo association. It consequently demonstrates how codec motion can reduce frontend cost without enforcing the pixel-access boundary studied here.
+
+\section{Motion Vectors for Correspondence and Reconstruction}
+
+Zouein et al.~\cite{zouein2025leveraging} convert AV1 block centres and motion vectors into point correspondences, propagate them into multi-frame tracks, and reject directionally inconsistent tracks using cosine similarity. Their evaluation focuses on correspondence density, pairwise geometry, and a small COLMAP structure-from-motion demonstration rather than a dedicated visual-odometry estimator.
+
+The subsequent Gaussian-splatting work~\cite{zouein2026efficient} reuses this
+correspondence pipeline to produce dense COLMAP point clouds for initializing 3D
+Gaussian splatting. It evaluates the effect of denser reconstruction on
+rendering quality and training time, without introducing calibrated stereo depth
+or a motion-vector-specific visual-odometry backend.
+
+\section{Motion-Vector Stereo}
+
+Passthrough+~\cite{chaurasia2020passthrough} repurposes video-encoding hardware
+to estimate correspondences between rectified views of a stereo pair. Shifted
+copies of the stereo images reduce the displacement presented to the encoder
+and offset the codec block grid, after which consistency checks and calibrated
+triangulation produce sparse 3D points. This per-frame stereo stage uses codec
+motion, but the complete scene proxy is not motion-vector-only: the system
+assumes a high-precision headset pose, typically supplied by an independent
+SLAM system, and uses pose to propagate the previous depth map into the current
+view. That pose-assisted temporal model is unavailable under the information
+restriction of this thesis. The present work adapts the sparse
+stereo-reconstruction principle; the differences in preprocessing and downstream
+use are specified in \autoref{chapter:method}.
+
+\section{Spatial Feature Management}
+
+Feature-based estimators generally regulate both the number and spatial
+distribution of their observations. VINS-Mono maintains a target population of
+corner tracks and enforces a minimum separation between newly detected features
+to obtain a more uniform distribution~\cite{qin2018vins}. Similarly, the
+low-latency VIO pipeline of K\"uhne et al. suppresses nearby detector candidates
+so that the same local feature is not represented repeatedly~\cite{kuhne2025lowlatency}.
+Both systems make these decisions from image-derived features. Their common
+design objective motivates the pixel-free analogue developed here: codec
+observations that are indistinguishable at the available spatial and depth
+resolution should not provide duplicated geometric support.
+
+\section{Positioning of This Work}
+
+The compressed-domain systems above span the distinctions central to this thesis: whether
+codec motion is refined using pixels, whether recovered structure is planar or
+point-based, whether metric scale is supplied by stereo, and whether
+correspondences persist beyond a frame pair. Work that merely accelerates video
+decoding or generic optical flow without using codec side information is outside
+this comparison.
+
+Prior codec-only navigation establishes that motion vectors can support
+camera-motion estimation in structured, plane-dominated
+environments~\cite{li2014toward}. Other work uses codec motion to initialize
+pixel-domain tracking or provide correspondences for reconstruction. The present
+work investigates one way to use these measurements in a calibrated, point-based
+stereo visual-odometry system without requiring a planar scene model. The
+evaluated design combines metric motion-vector stereo, persistent 3D
+association, suppression of geometrically indistinguishable observations, and
+displacement-based optimization without pixel refinement. Its reverse-temporal
+streams are nevertheless prepared offline, so this study also leaves causal,
+end-to-end real-time operation unverified.
+
+\begin{table}[p]
+  \centering
+  \caption[Comparison of compressed-domain visual methods]{Comparison of directly related compressed-domain systems. ``Pixels''
+  refers to image-intensity access in correspondence generation or geometric
+  estimation, not to the image input required by an encoder.}
+  \label{tab:related-work-comparison}
+  \begingroup
+  \footnotesize
+  \setlength{\tabcolsep}{1mm}
+  \begin{tabular}{@{}L{26mm}L{29mm}L{24mm}L{36mm}L{25mm}@{}}
+    \toprule
+    Work & Input and representation & Scale and pixel access &
+    Track persistence and validation & Estimator or output \\
+    \midrule
+    Young et al.~\cite{young2020fast}
+      & Coded MVs\newline Dense 2D flow
+      & No scale\newline Pixels used
+      & \textit{Persistence:} none\newline \textit{Validation:} pairwise confidence
+      & Pixel-guided flow \\
+    Li and Song~\cite{li2014toward}
+      & MPEG MVs\newline Planes and pose
+      & Monocular\newline No pixels
+      & \textit{Persistence:} plane tracks\newline \textit{Validation:} homography RANSAC
+      & Extended Kalman filter \\
+    MoV-SLAM~\cite{turner2023movslam}
+      & H.264 MVs and LK\newline Point tracks
+      & Mono/stereo\newline Pixels used
+      & \textit{Persistence:} point tracks\newline \textit{Validation:} LK fallback
+      & SLAM backend \\
+    Zouein et al.~\cite{zouein2025leveraging}
+      & AV1 MVs\newline 2D point tracks
+      & Monocular\newline No pixels
+      & \textit{Persistence:} MV tracks\newline \textit{Validation:} directional check
+      & Matching and SfM study \\
+    Zouein et al.~(2026)~\cite{zouein2026efficient}
+      & AV1 MVs\newline Dense 3D points
+      & Monocular SfM\newline Pixels downstream
+      & \textit{Persistence:} MV tracks\newline \textit{Validation:} geometric checks
+      & COLMAP and 3DGS \\
+    VOCA~\cite{hilscher2026voca}
+      & H.264-seeded KLT\newline Point tracks
+      & Calibrated VO\newline Pixels used
+      & \textit{Persistence:} KLT tracks\newline \textit{Validation:} fallback modes
+      & Sliding window BA \\
+    Passthrough+~\cite{chaurasia2020passthrough}
+      & Stereo encoder MVs and SLAM pose\newline Sparse depth and dense proxy
+      & Metric stereo\newline Pixels used
+      & \textit{Persistence:} temporal depth\newline \textit{Validation:} stereo consistency
+      & View synthesis \\
+    Pixelless VO (this thesis)
+      & H.264 temporal and stereo MVs\newline Persistent 3D points
+      & Metric stereo\newline No estimator pixels
+      & \textit{Persistence:} landmark IDs\newline \textit{Validation:} reciprocal + TEASER++
+      & Sliding window BA \\
+    \bottomrule
+  \end{tabular}
+  \endgroup
+\end{table}
+
+No row alone defines the contribution. In particular, codec-only navigation
+predates this thesis, motion-vector tracks have already been used for
+reconstruction, and motion-vector stereo originates in Passthrough+. The present
+study tests how these ingredients behave together under a pixel-free estimation
+boundary and within a point-based visual-odometry estimator.
